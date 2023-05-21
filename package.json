@@ -1,0 +1,29 @@
+{
+  "name": "total4-auto-router",
+  "version": "1.0.0",
+  "description": "Auto router package for total.js framework (Inspired by SvelteKit)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomee03/total4-auto-router.git"
+  },
+  "keywords": [
+    "total.js",
+    "total4",
+    "auto",
+    "router",
+    "ar"
+  ],
+  "author": "Tomas Novak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tomee03/total4-auto-router/issues"
+  },
+  "homepage": "https://github.com/tomee03/total4-auto-router#readme",
+  "dependencies": {
+    "total4": "^0.0.83"
+  }
+}
