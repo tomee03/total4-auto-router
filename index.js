@@ -1,13 +1,16 @@
 const Fs = require('fs');
 const Path = require('path');
 
-const ROUTES_PATH = PATH.root(CONF.ar.src ? CONF.ar.src : 'routes');
+if (!CONF.ar)
+	CONF.ar = {};
+
+const ROUTES_PATH = PATH.root(CONF.ar.src || 'routes');
 const SSR_ENABLED = CONF.ar.ssr || false;
 const DEFAULT_FORM = CONF.ar.default_form || 'form';
 const AUTH_PATH = `${ROUTES_PATH}/auth.js`;
 const SERVER_HOOKS_PATH = `${ROUTES_PATH}/hooks.server.js`;
 const CLIENT_HOOKS_PATH = `${ROUTES_PATH}/hooks.client.js`;
-const APP_HTML_PATH = `${ROUTES_PATH}/app.html`;
+const APP_HTML_PATH = PATH.root('app.html');
 const LAYOUT_HTML_PATH = `${ROUTES_PATH}/layout.html`;
 const DEFAULT_ROUTER = CONF.ar.use || 'default';
 const API_PATH = CONF.ar.api || '/api/';
@@ -70,7 +73,7 @@ function extract_components(html) {
 function insert_plugin(content, name, isform) {
 
 	var index = match_script(content, isform);
-	if (index.start) {
+	if (index.end) {
 		index.start += 8;
 		content = `${content.slice(0, index.start)}\nPLUGIN('${name}', function(${isform ? 'Form' : 'Page'}) {\n${isform ? 'Form.open' : 'Page.open'} = ar.open;${isform ? 'Form.data' : 'Page.data'} = ar.data;${isform ? 'Form.api' : 'Page.api'} = ar.api;\n${content.slice(index.start)}`;
 
@@ -127,7 +130,7 @@ function readfolders(dir, layout) {
 	}
 
 	if (!route.layout)
-		route.layout = layout;
+		route.layout = layout || null;
 
 	// Map all children
 	for (var i = 0; i < content.length; i++) {
@@ -237,8 +240,7 @@ async function makeserver() {
 	clientjs = clientjs.replace('%%CONFIG%%', JSON.stringify(clientdata));
 
 	appjs.push(clientjs);
-	if (!SSR_ENABLED)
-		appjs.push(`(function(){${routedata.router}})();`);
+	!SSR_ENABLED && appjs.push(`(function(){${routedata.router}})();`);
 	appjs.push(`(function(){${hooks}})();`);
 
 	var app = await Fs.promises.readFile(APP_HTML_PATH, 'utf-8');
@@ -337,6 +339,10 @@ async function prepare_routedata(layouts) {
 	for (var i = 0; i < arr.length; i++) {
 		var route = arr[i];
 		var layout = {};
+
+		if (!route.layout)
+			continue;
+
 		layout.id = route.layout === LAYOUT_HTML_PATH ? 'main' : route.layout.crc32().toString().md5().slug(5);
 		layout.id = PREFIX_LAYOUT + layout.id;
 		layout.file = route.layout;
@@ -577,7 +583,14 @@ function startroutes() {
 }
 
 function init() {
-	var root = readfolders(ROUTES_PATH, LAYOUT_HTML_PATH);
+
+	if (!Fs.existsSync(ROUTES_PATH))
+		Fs.mkdirSync(ROUTES_PATH);
+
+	if (!Fs.existsSync(PATH.public()))
+		Fs.mkdirSync(PATH.public());
+
+	var root = readfolders(ROUTES_PATH);
 
 	try {
 		var authopt = require(AUTH_PATH);
