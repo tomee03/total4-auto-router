@@ -41,14 +41,13 @@ const DEFAULT_ACTION = function() {
 	self.json({ error: 'MISSING `action` FOR THIS ROUTE!', params: self.params, q: self.query });
 }
 
-var uicom = CONF.ar.components ? CONF.ar.components.split(',') : [];
-uicom.push('importer,exec');
 var pages = [];
 var isauth = false;
 var ishook = false;
+var uicom = CONF.ar.components ? CONF.ar.components.split(',') : [];
+uicom.push(...['importer', 'exec']);
 
 function read_config(content, isform) {
-	extract_components(content);
 	try {
 		var config = content.match(isform ? REG_FORM_CONFIG : REG_PAGE_CONFIG)[2];
 		var str = JSON.stringify(eval('(' + config + ')'));
@@ -59,6 +58,7 @@ function read_config(content, isform) {
 }
 
 function extract_components(html) {
+
 	var com = html.match(REG_UICOMPONENT);
 	if (com) {
 		com.map(function(val, i) {
@@ -271,14 +271,14 @@ async function makeserver() {
 	for (var i = 0; i < routedata.layouts.length; i++) {
 		var layout = routedata.layouts[i];
 
-		build_layout_file(layout, SSR_ENABLED ? CLONE(app) : null);
+		await build_layout_file(layout, SSR_ENABLED ? CLONE(app) : null);
 
 		for (var j = 0; j < layout.pages.length; j++) {
 			var page = layout.pages[j];
-			build_page_file(page, layout.id);
+			await build_page_file(page, layout.id);
 
 			for (var k = 0; k < page.forms.length; k++)
-				build_form_file(page.forms[k]);
+				await build_form_file(page.forms[k]);
 		}
 	}
 
@@ -292,6 +292,8 @@ async function build_layout_file(layout, app) {
 	var content = await Fs.promises.readFile(layout.file, 'utf-8');
 	content = content.replace(REG_ROUTER_DIV, layout.content);
 	content = insert_plugin(content, layout.id);
+
+	extract_components(content);
 
 	if (SSR_ENABLED) {
 		app = app.replace('%total4.body%', content);
@@ -307,11 +309,12 @@ async function build_page_file(page, layoutid) {
 	var index = content.length;
 	content = `${content.slice(0, index)}\n${page.content.join('')}${content.slice(index)}`;
 
+	extract_components(content);
+
 	if (SSR_ENABLED) {
 		content = `@{layout('${layoutid}')}${content}`;
 		await Fs.promises.writeFile(PATH.views(`${page.id}.html`), U.minify_html(content));
-	}
-	else
+	} else
 		await Fs.promises.writeFile(PATH.public(`dist/pages/${page.id}.html`), U.minify_html(content));
 }
 
@@ -326,6 +329,7 @@ async function build_form_file(form) {
 	tmp += content.substr(index.start, index.end);
 	tmp = insert_plugin(tmp, form.id, true);
 
+	extract_components(tmp);
 	await Fs.promises.writeFile(PATH.public(`dist/forms/${form.id}.html`), tmp);
 }
 
